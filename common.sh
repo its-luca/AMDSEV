@@ -60,10 +60,20 @@ build_kernel()
 			run_cmd git remote set-url current ${KERNEL_GIT_URL}
 			run_cmd git fetch current
 			run_cmd git checkout current/${BRANCH}
+			if [ "${V}" = "host" ]; then
+				echo "Switching to branch ${KERNEL_HOST_COMMIT}"
+				run_cmd git checkout ${KERNEL_HOST_COMMIT}
+				echo "Applying sev-step patch "
+				patch -p 1 < "../../${KERNEL_HOST_SEV_STEP_PATCH}"
+				if [ $? -ne 0]; then
+					echo "Failed to apply sev-step patch. Contact maintainer"
+					exit
+				fi
+			fi
 			COMMIT=$(git log --format="%h" -1 HEAD)
 
 			run_cmd "cp /boot/config-$(uname -r) .config"
-			run_cmd ./scripts/config --set-str LOCALVERSION "$VER-$COMMIT"
+			run_cmd ./scripts/config --set-str LOCALVERSION "$VER-$COMMIT-sev-step"
 			run_cmd ./scripts/config --disable LOCALVERSION_AUTO
 			run_cmd ./scripts/config --enable  DEBUG_INFO
 			run_cmd ./scripts/config --enable  DEBUG_INFO_REDUCED
@@ -79,7 +89,6 @@ build_kernel()
 
 		# Build 
 		run_cmd $MAKE >/dev/null
-
 		if [ "$ID" = "debian" ] || [ "$ID_LIKE" = "debian" ]; then
 			run_cmd $MAKE bindeb-pkg
 		else
@@ -108,8 +117,9 @@ build_install_ovmf()
 
 	[ -d ovmf ] || {
 		run_cmd git clone --single-branch -b ${OVMF_BRANCH} ${OVMF_GIT_URL} ovmf
-
+		
 		pushd ovmf >/dev/null
+			run_cmd git checkout ${OVMF_COMMIT}
 			run_cmd git submodule update --init --recursive
 		popd >/dev/null
 	}

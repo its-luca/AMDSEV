@@ -5,7 +5,7 @@
 #
 HDA="/home/amd/fedora-30.raw"
 MEM="2048"
-SMP="4"
+SMP="1"
 VNC=""
 CONSOLE="serial"
 USE_VIRTIO="1"
@@ -15,6 +15,7 @@ SEV_ES="0"
 SEV_SNP="0"
 ALLOW_DEBUG="0"
 USE_GDB="0"
+CDROM=""
 
 EXEC_PATH="./usr/local"
 UEFI_PATH="$EXEC_PATH/share/qemu"
@@ -30,6 +31,8 @@ usage() {
 	echo " -mem MEM           guest memory size in MB (default $MEM)"
 	echo " -smp NCPUS         number of virtual cpus (default $SMP)"
 	echo " -allow-debug       dump vmcb on exit and enable the trace"
+	echo " -cdrom             insert .iso image into vm."
+	echo " -vnc               start given <host:d> start vnc server on host:5900 + d (thank qemu for that). Host may be omitted"
 	exit 1
 }
 
@@ -107,6 +110,12 @@ while [ -n "$1" ]; do
 				shift
 				;;
 		-initrd)	INITRD_FILE=$2
+				shift
+				;;
+		-cdrom) CDROM="$2"
+				shift
+				;;
+		-vnc)   VNC="$2"
 				shift
 				;;
 		*) 		usage
@@ -187,12 +196,12 @@ add_opts "-no-reboot"
 # The OVMF binary, including the non-volatile variable store, appears as a
 # "normal" qemu drive on the host side, and it is exposed to the guest as a
 # persistent flash device.
-add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_CODE},readonly"
+add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_CODE},readonly=on"
 
 # add network support and fwd port 22 to 8000
 # echo "guest port 22 is fwd to host 8000..."
 #add_opts "-netdev user,id=vmnic,hostfwd=tcp::8000-:22 -device e1000,netdev=vmnic,romfile="
-add_opts "-netdev user,id=vmnic"
+add_opts "-netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22,hostfwd=tcp:127.0.0.1:2223-:2223"
 add_opts " -device virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=vmnic,romfile="
 
 # If harddisk file is specified then add the HDD drive
@@ -247,8 +256,20 @@ else
 	add_opts "-vga ${CONSOLE}"
 fi
 
+if [ "${CDROM}" != "" ]; then
+	add_opts "-cdrom ${CDROM}"
+fi
+
+if [ "${VNC}" != "" ]; then
+	add_opts "-vnc ${VNC}"
+fi
+
+
 # start monitor on pty and named socket 'monitor'
 add_opts "-monitor pty -monitor unix:monitor,server,nowait"
+
+add_opts "-name sev-step-vm,debug-threads=on"
+
 
 # log the console  output in stdout.log
 QEMU_CONSOLE_LOG=`pwd`/stdout.log
@@ -263,6 +284,9 @@ echo | tee -a ${QEMU_CONSOLE_LOG}
 # map CTRL-C to CTRL ]
 echo "Mapping CTRL-C to CTRL-]"
 stty intr ^]
+
+echo "Disabling transparent huge pages"
+echo "never" | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
 
 echo "Launching VM ..."
 echo "  $QEMU_CMDLINE"

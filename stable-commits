@@ -5,6 +5,8 @@
 # hypervisor commit
 KERNEL_GIT_URL="https://github.com/AMDESE/linux.git"
 KERNEL_HOST_BRANCH="sev-snp-part2-v6"
+KERNEL_HOST_COMMIT="7cb4c57fe2ce0c32684e12fcf2e498577ee1da22"
+KERNEL_HOST_SEV_STEP_PATCH="sev-step.patch"
 KERNEL_GUEST_BRANCH="sev-snp-v12"
 
 # qemu commit
@@ -17,3 +19,4 @@ OVMF_GIT_URL="https://github.com/tianocore/edk2.git"
 # documented to work properly is b360b0b589. Please report any failures
 # with upstream UEFI/OVMF builds so they can be addressed.
 OVMF_BRANCH="master"
+OVMF_COMMIT="b360b0b589697da267f5d3a553e65635b91ebae2"
