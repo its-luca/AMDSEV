@@ -1,3 +1,6 @@
+# Archived
+This repo is now superseded by https://github.com/sev-step/sev-step
+
 # What is this
 
 This is a fork of the official [AMDSEV repo](https://github.com/AMDESE/AMDSEV) which also applies the kernel patch required for the sev step
